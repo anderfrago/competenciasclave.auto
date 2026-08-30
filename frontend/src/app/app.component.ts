@@ -1,0 +1,30 @@
+import { Component } from '@angular/core';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { AuthService } from './core/auth.service';
+
+@Component({
+  selector: 'app-root',
+  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  template: `
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+      <div class="container">
+        <a class="navbar-brand" routerLink="/">Competencias Clave</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navigation"><span class="navbar-toggler-icon"></span></button>
+        <div class="collapse navbar-collapse" id="navigation">
+          <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
+            @if (auth.user(); as user) {
+              <li class="nav-item"><a class="nav-link" routerLink="/" routerLinkActive="active">Mi espacio</a></li>
+              @if (user.role === 'tutor' || user.role === 'admin') { <li class="nav-item"><a class="nav-link" routerLink="/tutor" routerLinkActive="active">Tutoría</a></li> }
+              @if (user.role === 'admin') { <li class="nav-item"><a class="nav-link" routerLink="/administracion" routerLinkActive="active">Administración</a></li> }
+              <li class="nav-item"><span class="nav-link text-white-50">{{ user.fullName }}</span></li>
+              <li class="nav-item"><button class="btn btn-sm btn-outline-light" (click)="auth.logout()">Salir</button></li>
+            } @else { <li class="nav-item"><a class="btn btn-sm btn-light" routerLink="/acceso">Acceder</a></li> }
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <main class="container py-4 py-md-5"><router-outlet /></main>
+  `
+})
+export class AppComponent { constructor(readonly auth: AuthService) {} }
+
