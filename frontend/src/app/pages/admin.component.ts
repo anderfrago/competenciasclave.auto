@@ -2,34 +2,152 @@ import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../core/api.service';
 import { Competency, Course, User } from '../core/models';
-
-@Component({ standalone: true, imports: [FormsModule], template: `
-  <section class="mb-4"><h1 class="h2 mb-1">Administración</h1><p class="text-secondary mb-0">Gestiona cursos, tutores, cuestionario y los textos de devolución.</p></section>
-  @if (message()) {<div class="alert" [class.alert-danger]="isError()" [class.alert-success]="!isError()">{{ message() }}</div>}
-  <div class="row g-4"><div class="col-lg-7"><section class="card"><div class="card-body"><div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h4 mb-0">Cursos</h2><button class="btn btn-sm btn-primary" (click)="createCourse()">Crear curso</button></div><div class="row g-2 mb-3"><div class="col"><input class="form-control" [(ngModel)]="newCourse.name" placeholder="Nombre del curso"></div><div class="col-md-4"><input class="form-control" [(ngModel)]="newCourse.academicYear" placeholder="2026/2027"></div></div><div class="list-group list-group-flush">@for (course of courses(); track course.id) {<div class="list-group-item px-0"><div class="d-flex justify-content-between gap-3"><div><strong>{{ course.name }}</strong><span class="ms-2 small-muted">{{ course.academicYear }}</span><div class="small-muted">{{ course.tutors.map(t => t.fullName).join(', ') || 'Sin tutor asignado' }}</div><code class="small">/invitacion/{{ course.inviteCode }}</code></div><div class="btn-group align-self-start"><button class="btn btn-sm btn-outline-secondary" (click)="selectCourse(course)">Asignar tutor</button><button class="btn btn-sm btn-outline-danger" (click)="removeCourse(course)">Eliminar</button></div></div></div>} @empty {<p class="text-secondary mb-0">No hay cursos todavía.</p>}</div></div></section></div>
-    <div class="col-lg-5"><section class="card mb-4"><div class="card-body"><h2 class="h4">Asignar tutor</h2>@if (selectedCourse(); as course) {<p class="small-muted">Curso: <strong>{{ course.name }}</strong></p><input class="form-control mb-2" [(ngModel)]="userQuery" (input)="findUsers()" placeholder="Busca por nombre o correo"><div class="list-group">@for (user of users(); track user.id) {<button class="list-group-item list-group-item-action" (click)="assignTutor(user)"><strong>{{ user.fullName }}</strong><small class="d-block">{{ user.email }} · {{ user.authProvider }}</small></button>} @empty {<span class="small-muted">Busca una cuenta que ya haya accedido con Google.</span>}</div>} @else {<p class="text-secondary mb-0">Selecciona un curso para asignar una cuenta tutora de Google @cuatrovientos.org.</p>}</div></section>
-      <section class="card"><div class="card-body"><h2 class="h4">Mensaje final de ánimo</h2><textarea class="form-control mb-2" rows="5" [(ngModel)]="encouragement"></textarea><button class="btn btn-outline-primary" (click)="saveEncouragement()">Guardar mensaje</button></div></section></div></div>
-  <section class="card mt-4"><div class="card-body"><h2 class="h4">Cuestionario y rúbrica</h2><p class="small-muted">Gestiona las competencias, sus ítems y la devolución que verá el alumnado.</p><div class="input-group mb-4"><input class="form-control" [(ngModel)]="newCompetencyName" placeholder="Nueva competencia"><button class="btn btn-primary" (click)="addCompetency()">Añadir competencia</button></div>@for (competency of competencies(); track competency.id) {<div class="border rounded p-3 mb-4"><div class="d-flex gap-2 mb-3"><input class="form-control fw-semibold" [(ngModel)]="competency.name"><button class="btn btn-outline-primary" (click)="saveCompetency(competency)">Guardar</button><button class="btn btn-outline-danger" (click)="removeCompetency(competency)">Eliminar</button></div><h3 class="h6">Devoluciones de rúbrica</h3>@for (level of competency.rubricLevels; track level.id) {<div class="row g-2 align-items-start mb-2"><div class="col-md-2"><input class="form-control" [(ngModel)]="level.label"></div><div class="col-md-2"><input class="form-control" type="number" min="1" max="4" step=".01" [(ngModel)]="level.maxScore"></div><div class="col-md"><textarea class="form-control" rows="2" [(ngModel)]="level.feedback"></textarea></div><div class="col-md-auto"><button class="btn btn-outline-primary" (click)="saveLevel(level)">Guardar</button></div></div>}<h3 class="h6 mt-4">Ítems</h3>@for (item of competency.items || []; track item.id) {<div class="row g-2 align-items-center mb-2"><div class="col"><textarea class="form-control" rows="2" [(ngModel)]="item.statement"></textarea></div><div class="col-md-auto form-check"><input class="form-check-input" type="checkbox" [(ngModel)]="item.reverseScore" [id]="'reverse_' + item.id"><label class="form-check-label" [for]="'reverse_' + item.id">Puntuación inversa</label></div><div class="col-md-auto"><button class="btn btn-outline-primary me-1" (click)="saveItem(item)">Guardar</button><button class="btn btn-outline-danger" (click)="removeItem(item)">Eliminar</button></div></div>}<div class="input-group mt-3"><input class="form-control" [(ngModel)]="newItemText" [placeholder]="'Nuevo ítem para ' + competency.name"><button class="btn btn-outline-primary" (click)="addItem(competency.id)">Añadir ítem</button></div></div>}</div></section>
-` })
+@Component({
+  standalone: true,
+  imports: [FormsModule],
+  templateUrl: './admin.component.html'
+})
 export class AdminComponent implements OnInit {
-  readonly courses = signal<Course[]>([]); readonly users = signal<User[]>([]); readonly competencies = signal<Competency[]>([]); readonly selectedCourse = signal<Course | null>(null); readonly message = signal(''); readonly isError = signal(false);
-  newCourse = {name: '', academicYear: ''}; userQuery = ''; encouragement = ''; newCompetencyName = ''; newItemText = '';
-  constructor(private readonly api: ApiService) {}
-  ngOnInit() { this.reload(); this.api.settings().subscribe({next: value => this.encouragement = value.encouragementMessage}); this.api.adminCompetencies().subscribe({next: value => this.competencies.set(value.competencies)}); }
-  reload() { this.api.adminCourses().subscribe({next: value => this.courses.set(value.courses)}); }
-  createCourse() { this.api.createCourse(this.newCourse).subscribe({next: () => {this.newCourse = {name: '', academicYear: ''}; this.reload(); this.notice('Curso creado.');}, error: response => this.notice(response.error?.error || 'No se ha podido crear.', true)}); }
-  removeCourse(course: Course) { if (!confirm(`¿Eliminar el curso ${course.name}? También se eliminarán sus respuestas.`)) return; this.api.deleteCourse(course.id).subscribe({next: () => {this.reload(); this.notice('Curso eliminado.');}}); }
-  selectCourse(course: Course) { this.selectedCourse.set(course); this.users.set([]); this.userQuery = ''; }
-  findUsers() { if (this.userQuery.length < 2) {this.users.set([]); return;} this.api.users(this.userQuery).subscribe({next: value => this.users.set(value.users)}); }
-  assignTutor(user: User) { const course = this.selectedCourse(); if (!course) return; this.api.assignTutor(course.id, user.id).subscribe({next: value => {this.selectedCourse.set(value.course); this.reload(); this.notice('Tutor asignado.');}, error: response => this.notice(response.error?.error || 'No se ha podido asignar.', true)}); }
-  saveEncouragement() { this.api.updateSettings(this.encouragement).subscribe({next: () => this.notice('Mensaje actualizado.')}); }
-  saveLevel(level: Competency['rubricLevels'][number]) { this.api.updateRubric(level.id, level).subscribe({next: () => this.notice('Rúbrica actualizada.')}); }
-  addCompetency() { this.api.createCompetency({name: this.newCompetencyName, sortOrder: this.competencies().length + 1}).subscribe({next: () => {this.newCompetencyName = ''; this.reloadCompetencies(); this.notice('Competencia creada.');}, error: response => this.notice(response.error?.error || 'No se ha podido crear.', true)}); }
-  saveCompetency(competency: Competency) { this.api.updateCompetency(competency.id, competency).subscribe({next: () => this.notice('Competencia actualizada.')}); }
-  removeCompetency(competency: Competency) { if (!confirm(`¿Eliminar ${competency.name}?`)) return; this.api.deleteCompetency(competency.id).subscribe({next: () => {this.reloadCompetencies(); this.notice('Competencia eliminada.');}}); }
-  addItem(competencyId: number) { if (!this.newItemText.trim()) return; this.api.createItem(competencyId, {statement: this.newItemText, sortOrder: 999}).subscribe({next: () => {this.newItemText = ''; this.reloadCompetencies(); this.notice('Ítem creado.');}}); }
-  saveItem(item: any) { this.api.updateItem(item.id, item).subscribe({next: () => this.notice('Ítem actualizado.')}); }
-  removeItem(item: any) { if (!confirm('¿Eliminar este ítem?')) return; this.api.deleteItem(item.id).subscribe({next: () => {this.reloadCompetencies(); this.notice('Ítem eliminado.');}}); }
-  private reloadCompetencies() { this.api.adminCompetencies().subscribe({next: value => this.competencies.set(value.competencies)}); }
-  private notice(text: string, error = false) { this.message.set(text); this.isError.set(error); }
+  readonly courses = signal<Course[]>([]);
+  readonly users = signal<User[]>([]);
+  readonly competencies = signal<Competency[]>([]);
+  readonly selectedCourse = signal<Course | null>(null);
+  readonly message = signal('');
+  readonly isError = signal(false);
+
+  newCourse = { name: '', academicYear: '' };
+  userQuery = '';
+  encouragement = '';
+  newCompetencyName = '';
+  newItemText = '';
+
+  constructor(private readonly api: ApiService) { }
+
+  ngOnInit() {
+    this.reload(); this.api.settings().subscribe({ next: value => this.encouragement = value.encouragementMessage });
+    this.api.adminCompetencies().subscribe({ next: value => this.competencies.set(value.competencies) });
+  }
+  reload() {
+    this.api.adminCourses().subscribe({ next: value => this.courses.set(value.courses) });
+  }
+  createCourse() {
+    this.api.createCourse(this.newCourse).subscribe({
+      next: () => {
+        this.newCourse = { name: '', academicYear: '' };
+        this.reload();
+        this.notice('Curso creado.');
+      }, error: response => this.notice(response.error?.error || 'No se ha podido crear.', true)
+    });
+
+  }
+  removeCourse(course: Course) {
+    if (!confirm(`¿Eliminar el curso ${course.name}? También se eliminarán sus respuestas.`))
+      return; this.api.deleteCourse(course.id).subscribe({
+        next: () => {
+          this.reload();
+          this.notice('Curso eliminado.');
+        }
+      });
+  }
+
+  selectCourse(course: Course) {
+    this.selectedCourse.set(course);
+    this.users.set([]);
+    this.userQuery = '';
+  }
+  findUsers() {
+    if (this.userQuery.length < 2) {
+      this.users.set([]);
+      return;
+    }
+    this.api.users(this.userQuery).subscribe({
+      next: value => this.users.set(value.users)
+    });
+  }
+
+  assignTutor(user: User) {
+    const course = this.selectedCourse();
+    if (!course) return;
+    this.api.assignTutor(course.id, user.id).subscribe({
+      next: value => {
+        this.selectedCourse.set(value.course);
+        this.reload();
+        this.notice('Tutor asignado.');
+      }, error: response => this.notice(response.error?.error || 'No se ha podido asignar.', true)
+    });
+  }
+  saveEncouragement() {
+    this.api.updateSettings(this.encouragement).subscribe({
+      next: () => this.notice('Mensaje actualizado.')
+    });
+  }
+  saveLevel(level: Competency['rubricLevels'][number]) {
+    this.api.updateRubric(level.id, level).subscribe({
+      next: () => this.notice('Rúbrica actualizada.')
+    }
+    );
+  }
+
+  addCompetency() {
+    this.api.createCompetency({ name: this.newCompetencyName, sortOrder: this.competencies().length + 1 }).subscribe({
+      next: () => {
+        this.newCompetencyName = '';
+        this.reloadCompetencies();
+        this.notice('Competencia creada.');
+      },
+      error: response =>
+        this.notice(response.error?.error || 'No se ha podido crear.', true)
+    })
+      ;
+  }
+
+  saveCompetency(competency: Competency) {
+    this.api.updateCompetency(competency.id, competency).subscribe({
+      next: () =>
+        this.notice('Competencia actualizada.')
+    });
+  }
+
+  removeCompetency(competency: Competency) {
+    if (!confirm(`¿Eliminar ${competency.name}?`))
+      return;
+    this.api.deleteCompetency(competency.id).subscribe({
+      next: () => {
+        this.reloadCompetencies();
+        this.notice('Competencia eliminada.');
+      }
+
+
+
+    });
+  }
+  addItem(competencyId: number) {
+    if (!this.newItemText.trim()) return;
+    this.api.createItem(competencyId, { statement: this.newItemText, sortOrder: 999 }).subscribe({
+      next: () => {
+        this.newItemText = ''; this.reloadCompetencies();
+        this.notice('Ítem creado.');
+      }
+    });
+  }
+  saveItem(item: any) {
+    this.api.updateItem(item.id, item).subscribe({
+      next: () =>
+        this.notice('Ítem actualizado.')
+    });
+  }
+  removeItem(item: any) {
+    if (!confirm('¿Eliminar este ítem?')) return;
+    this.api.deleteItem(item.id).subscribe({
+      next: () => {
+        this.reloadCompetencies(); this.notice('Ítem eliminado.');
+      }
+    });
+  }
+  private reloadCompetencies() {
+    this.api.adminCompetencies().subscribe({ next: value => this.competencies.set(value.competencies) });
+  }
+  private notice(text: string, error = false) {
+    this.message.set(text); this.isError.set(error);
+  }
 }

@@ -1,0 +1,102 @@
+<section class="mb-4">
+    <h1 class="h2 mb-1">Administración</h1>
+    <p class="text-secondary mb-0">Gestiona cursos, tutores, cuestionario y los textos de devolución.</p>
+</section>
+@if (message()) {<div class="alert" [class.alert-danger]="isError()" [class.alert-success]="!isError()">{{ message() }}
+</div>}
+<div class="row g-4">
+    <div class="col-lg-7">
+        <section class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h4 mb-0">Cursos</h2><button class="btn btn-sm btn-primary" (click)="createCourse()">Crear
+                        curso</button>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col"><input class="form-control" [(ngModel)]="newCourse.name"
+                            placeholder="Nombre del curso">
+                    </div>
+                    <div class="col-md-4"><input class="form-control" [(ngModel)]="newCourse.academicYear"
+                            placeholder="2026/2027"></div>
+                </div>
+                <div class="list-group list-group-flush">@for (course of courses(); track course.id) {<div
+                        class="list-group-item px-0">
+                        <div class="d-flex justify-content-between gap-3">
+                            <div><strong>{{ course.name }}</strong><span class="ms-2 small-muted">{{ course.academicYear
+                                    }}</span>
+                                <div class="small-muted">{{ course.tutors.map(t => t.fullName).join(', ') || 'Sin tutor
+                                    asignado' }}
+                                </div><code class="small">/invitacion/{{ course.inviteCode }}</code>
+                            </div>
+                            <div class="btn-group align-self-start"><button class="btn btn-sm btn-outline-secondary"
+                                    (click)="selectCourse(course)">Asignar tutor</button><button
+                                    class="btn btn-sm btn-outline-danger"
+                                    (click)="removeCourse(course)">Eliminar</button></div>
+                        </div>
+                    </div>} @empty {<p class="text-secondary mb-0">No hay cursos todavía.</p>}</div>
+            </div>
+        </section>
+    </div>
+    <div class="col-lg-5">
+        <section class="card mb-4">
+            <div class="card-body">
+                <h2 class="h4">Asignar tutor</h2>@if (selectedCourse(); as course) {<p class="small-muted">Curso:
+                    <strong>{{
+                        course.name }}</strong></p><input class="form-control mb-2" [(ngModel)]="userQuery"
+                    (input)="findUsers()" placeholder="Busca por nombre o correo">
+                <div class="list-group">@for (user of users(); track user.id) {<button
+                        class="list-group-item list-group-item-action" (click)="assignTutor(user)"><strong>{{
+                            user.fullName
+                            }}</strong><small class="d-block">{{ user.email }} · {{ user.authProvider
+                            }}</small></button>} @empty
+                    {<span class="small-muted">Busca una cuenta que ya haya accedido con Google.</span>}</div>} @else {
+                <p class="text-secondary mb-0">Selecciona un curso para asignar una cuenta tutora de Google
+                    @cuatrovientos.org.
+                </p>}
+            </div>
+        </section>
+        <section class="card">
+            <div class="card-body">
+                <h2 class="h4">Mensaje final de ánimo</h2><textarea class="form-control mb-2" rows="5"
+                    [(ngModel)]="encouragement"></textarea><button class="btn btn-outline-primary"
+                    (click)="saveEncouragement()">Guardar mensaje</button>
+            </div>
+        </section>
+    </div>
+</div>
+<section class="card mt-4">
+    <div class="card-body">
+        <h2 class="h4">Cuestionario y rúbrica</h2>
+        <p class="small-muted">Gestiona las competencias, sus ítems y la devolución que verá el alumnado.</p>
+        <div class="input-group mb-4"><input class="form-control" [(ngModel)]="newCompetencyName"
+                placeholder="Nueva competencia"><button class="btn btn-primary" (click)="addCompetency()">Añadir
+                competencia</button></div>@for (competency of competencies(); track competency.id) {<div
+            class="border rounded p-3 mb-4">
+            <div class="d-flex gap-2 mb-3"><input class="form-control fw-semibold" [(ngModel)]="competency.name"><button
+                    class="btn btn-outline-primary" (click)="saveCompetency(competency)">Guardar</button><button
+                    class="btn btn-outline-danger" (click)="removeCompetency(competency)">Eliminar</button></div>
+            <h3 class="h6">Devoluciones de rúbrica</h3>@for (level of competency.rubricLevels; track level.id) {<div
+                class="row g-2 align-items-start mb-2">
+                <div class="col-md-2"><input class="form-control" [(ngModel)]="level.label"></div>
+                <div class="col-md-2"><input class="form-control" type="number" min="1" max="4" step=".01"
+                        [(ngModel)]="level.maxScore"></div>
+                <div class="col-md"><textarea class="form-control" rows="2" [(ngModel)]="level.feedback"></textarea>
+                </div>
+                <div class="col-md-auto"><button class="btn btn-outline-primary"
+                        (click)="saveLevel(level)">Guardar</button>
+                </div>
+            </div>}<h3 class="h6 mt-4">Ítems</h3>@for (item of competency.items || []; track item.id) {<div
+                class="row g-2 align-items-center mb-2">
+                <div class="col"><textarea class="form-control" rows="2" [(ngModel)]="item.statement"></textarea></div>
+                <div class="col-md-auto form-check"><input class="form-check-input" type="checkbox"
+                        [(ngModel)]="item.reverseScore" [id]="'reverse_' + item.id"><label class="form-check-label"
+                        [for]="'reverse_' + item.id">Puntuación inversa</label></div>
+                <div class="col-md-auto"><button class="btn btn-outline-primary me-1"
+                        (click)="saveItem(item)">Guardar</button><button class="btn btn-outline-danger"
+                        (click)="removeItem(item)">Eliminar</button></div>
+            </div>}<div class="input-group mt-3"><input class="form-control" [(ngModel)]="newItemText"
+                    [placeholder]="'Nuevo ítem para ' + competency.name"><button class="btn btn-outline-primary"
+                    (click)="addItem(competency.id)">Añadir ítem</button></div>
+        </div>}
+    </div>
+</section>`

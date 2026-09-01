@@ -5,12 +5,28 @@ import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { Course } from '../core/models';
 
-@Component({ standalone: true, imports: [FormsModule, DecimalPipe, DatePipe, RouterLink], template: `
-  <section class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4"><div><h1 class="h2 mb-1">Panel de tutoría</h1><p class="text-secondary mb-0">Consulta la visión grupal e individual de tus cursos.</p></div><select class="form-select w-auto" [(ngModel)]="selectedCourseId" (change)="loadDashboard()"><option [ngValue]="0">Selecciona un curso</option>@for (course of courses(); track course.id) {<option [ngValue]="course.id">{{ course.name }} · {{ course.academicYear }}</option>}</select></section>
-  @if (dashboard(); as data) {<div class="row g-3 mb-4"><div class="col-md-4"><div class="card"><div class="card-body"><div class="small-muted">Alumnado inscrito</div><div class="display-6">{{ data.summary.enrolledStudents }}</div></div></div></div><div class="col-md-4"><div class="card"><div class="card-body"><div class="small-muted">Con resultados</div><div class="display-6">{{ data.summary.studentsWithResults }}</div></div></div></div><div class="col-md-4"><div class="card"><div class="card-body"><div class="small-muted">Formularios completados</div><div class="display-6">{{ data.summary.totalSubmissions }}</div></div></div></div></div>
-    <div class="row g-4"><div class="col-lg-6"><section class="card h-100"><div class="card-body"><h2 class="h5">Media por competencia</h2>@for (item of data.averages; track item.competency) {<div class="mb-3"><div class="d-flex justify-content-between"><span>{{ item.competency }}</span><strong>{{ item.score | number:'1.2-2' }}</strong></div><div class="chart-bar"><span [style.width.%]="item.score * 25"></span></div></div>} @empty {<p class="text-secondary mb-0">Aún no hay resultados.</p>}</div></section></div>
-      <div class="col-lg-6"><section class="card h-100"><div class="card-body"><h2 class="h5">Distribución por nivel</h2>@for (item of data.levels; track item.competency) {<div class="mb-3"><strong class="d-block mb-1">{{ item.competency }}</strong><span class="badge text-bg-secondary me-1">Incipiente: {{ item.counts['Incipiente'] || 0 }}</span><span class="badge text-bg-info me-1">En desarrollo: {{ item.counts['En desarrollo'] || 0 }}</span><span class="badge text-bg-success">Generado: {{ item.counts['Generado'] || 0 }}</span></div>} @empty {<p class="text-secondary mb-0">Aún no hay resultados.</p>}</div></section></div></div>
-    <section class="card mt-4"><div class="card-body p-0"><div class="p-4 pb-2"><h2 class="h5">Último resultado por estudiante</h2></div><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Estudiante</th><th>Fecha</th>@for (average of data.averages; track average.competency) {<th>{{ average.competency }}</th>}<th></th></tr></thead><tbody>@for (student of data.students; track student.submissionId) {<tr><td>{{ student.student.fullName }}<small class="d-block text-secondary">{{ student.student.email }}</small></td><td>{{ student.completedAt | date:'shortDate' }}</td>@for (average of data.averages; track average.competency) {<td>{{ student.scores[average.competency] || '—' }}</td>}<td><a class="btn btn-sm btn-outline-primary" [routerLink]="['/resultado', student.submissionId]">Ver</a></td></tr>} @empty {<tr><td [attr.colspan]="data.averages.length + 3" class="text-center text-secondary py-4">Aún no hay respuestas en este curso.</td></tr>}</tbody></table></div></div></section>
-  } @else {<div class="card"><div class="card-body text-secondary">Selecciona un curso para consultar sus resultados.</div></div>}
-` })
-export class TutorComponent implements OnInit { readonly courses = signal<Course[]>([]); readonly dashboard = signal<any>(null); selectedCourseId = 0; constructor(private readonly api: ApiService) {} ngOnInit() { this.api.tutorCourses().subscribe({next: value => this.courses.set(value.courses)}); } loadDashboard() { if (!this.selectedCourseId) { this.dashboard.set(null); return; } this.api.dashboard(this.selectedCourseId).subscribe({next: value => this.dashboard.set(value)}); } }
+@Component({
+  standalone: true, 
+  imports: [FormsModule, DecimalPipe, DatePipe, RouterLink],
+  templateUrl: './tutor.component.html' 
+})
+export class TutorComponent implements OnInit {
+  readonly courses = signal<Course[]>([]);
+  readonly dashboard = signal<any>(null);
+  selectedCourseId = 0;
+
+  constructor(private readonly api: ApiService) { }
+
+  ngOnInit() {
+    this.api.tutorCourses().subscribe({ next: value => this.courses.set(value.courses) });
+  }
+  loadDashboard() {
+    if (!this.selectedCourseId) {
+      this.dashboard.set(null); return;
+    }
+
+    this.api.dashboard(this.selectedCourseId).subscribe({
+      next: value => this.dashboard.set(value)
+    });
+  }
+}

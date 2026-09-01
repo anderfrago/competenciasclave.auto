@@ -26,5 +26,7 @@ import { AuthService } from './core/auth.service';
     <main class="container py-4 py-md-5"><router-outlet /></main>
   `
 })
-export class AppComponent { constructor(readonly auth: AuthService) {} }
+export class AppComponent { 
+  constructor(readonly auth: AuthService) {} 
+}
 
