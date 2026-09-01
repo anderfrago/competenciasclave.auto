@@ -10,5 +10,4 @@ El proyecto se divide en `backend` (Flask y SQLite) y `frontend` (Angular 21, Si
 2. Crea un entorno virtual en `backend`, instala `requirements.txt` y ejecuta `flask --app run.py init-db`.
 3. En `frontend`, instala las dependencias con `pnpm install` y arranca `pnpm start`.
 
-La carga inicial toma las competencias, los ítems y las devoluciones de `Template Formulario CCs (respuestas).xlsx`.
 
