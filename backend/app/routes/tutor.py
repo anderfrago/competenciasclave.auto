@@ -1,6 +1,11 @@
 from collections import defaultdict
 
-from flask import Blueprint, jsonify
+from io import BytesIO
+
+from flask import Blueprint, jsonify, send_file
+from openpyxl import Workbook
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.pdfgen import canvas
 
 from ..auth import current_user, roles_required
 from ..models import Course, Submission
@@ -77,3 +82,64 @@ def view_submission(submission_id):
         return jsonify({"error": "No tienes acceso a este resultado."}), 403
     return jsonify({"submission": submission.as_dict(include_answers=True)})
 
+
+def _course_submissions(course_id):
+    return Submission.query.filter_by(course_id=course_id).order_by(Submission.completed_at).all()
+
+
+@tutor_bp.get("/courses/<int:course_id>/export.xlsx")
+@roles_required("tutor", "admin")
+def export_course_xlsx(course_id):
+    user = current_user()
+    course = Course.query.get_or_404(course_id)
+    if not can_view_course(user, course):
+        return jsonify({"error": "No tienes acceso a este curso."}), 403
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Resultados"
+    submissions = _course_submissions(course.id)
+    competencies = sorted({result.competency.name for item in submissions for result in item.results})
+    sheet.append(["Alumno/a", "Correo", "Fecha", *competencies])
+    for item in submissions:
+        scores = {result.competency.name: result.score for result in item.results}
+        sheet.append([item.student.full_name, item.student.email, item.completed_at.isoformat(),
+                      *[round(scores.get(name), 2) if name in scores else "" for name in competencies]])
+    sheet.freeze_panes = "A2"
+    for column in sheet.columns:
+        sheet.column_dimensions[column[0].column_letter].width = min(42, max(12, max(len(str(cell.value or "")) for cell in column) + 2))
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+    return send_file(output, as_attachment=True, download_name=f"resultados-{course.id}.xlsx",
+                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@tutor_bp.get("/courses/<int:course_id>/export.pdf")
+@roles_required("tutor", "admin")
+def export_course_pdf(course_id):
+    user = current_user()
+    course = Course.query.get_or_404(course_id)
+    if not can_view_course(user, course):
+        return jsonify({"error": "No tienes acceso a este curso."}), 403
+    output = BytesIO()
+    pdf = canvas.Canvas(output, pagesize=landscape(A4))
+    width, height = landscape(A4)
+    y = height - 42
+    pdf.setTitle(f"Resultados - {course.name}")
+    pdf.setFont("Helvetica-Bold", 16)
+    pdf.drawString(36, y, f"{course.name} · {course.academic_year}")
+    y -= 28
+    for item in _course_submissions(course.id):
+        if y < 60:
+            pdf.showPage(); y = height - 42
+        pdf.setFont("Helvetica-Bold", 9)
+        pdf.drawString(36, y, f"{item.student.full_name} · {item.completed_at.strftime('%d/%m/%Y %H:%M')}")
+        y -= 14
+        pdf.setFont("Helvetica", 8)
+        text = " | ".join(f"{result.competency.name}: {result.score:.2f} ({result.level})" for result in item.results)
+        for start in range(0, len(text), 150):
+            pdf.drawString(48, y, text[start:start + 150]); y -= 11
+        y -= 7
+    pdf.save()
+    output.seek(0)
+    return send_file(output, as_attachment=True, download_name=f"resultados-{course.id}.pdf", mimetype="application/pdf")

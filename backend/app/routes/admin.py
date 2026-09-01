@@ -1,7 +1,5 @@
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required
-
-from ..auth import roles_required
+from ..auth import current_user, roles_required
 from ..extensions import db
 from ..models import AppSetting, Competency, CompetencyItem, Course, RubricLevel, User
 
@@ -60,8 +58,6 @@ def add_tutor(course_id):
     user = db.session.get(User, body().get("userId"))
     if not user:
         return jsonify({"error": "No se ha encontrado la persona tutora."}), 404
-    if not (user.email.endswith("@cuatrovientos.org") and user.auth_provider == "google"):
-        return jsonify({"error": "El tutor debe haber accedido con Google usando una cuenta @cuatrovientos.org."}), 400
     user.role = "tutor" if user.role != "admin" else "admin"
     if user not in course.tutors:
         course.tutors.append(user)
@@ -88,6 +84,72 @@ def list_users():
     if query:
         users = [user for user in users if query in user.email.lower() or query in user.full_name.lower()]
     return jsonify({"users": [user.as_dict() for user in users]})
+
+
+@admin_bp.post("/users")
+@roles_required("admin")
+def create_user():
+    data = body()
+    email = (data.get("email") or "").strip().lower()
+    full_name = (data.get("fullName") or "").strip()
+    role = data.get("role", "student")
+    if not email or not full_name or role not in ("student", "tutor", "admin"):
+        return jsonify({"error": "Nombre, correo y rol válido son obligatorios."}), 400
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "Ya existe una cuenta con este correo."}), 409
+    user = User(email=email, full_name=full_name, role=role,
+                email_verified=bool(data.get("emailVerified", False)), auth_provider="local")
+    password = data.get("password") or ""
+    if password:
+        if len(password) < 8:
+            return jsonify({"error": "La contraseña debe tener al menos 8 caracteres."}), 400
+        user.set_password(password)
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({"user": user.as_dict()}), 201
+
+
+@admin_bp.patch("/users/<int:user_id>")
+@roles_required("admin")
+def update_user(user_id):
+    user = User.query.get_or_404(user_id)
+    data = body()
+    if "email" in data:
+        email = (data["email"] or "").strip().lower()
+        duplicate = User.query.filter(User.email == email, User.id != user.id).first()
+        if not email or duplicate:
+            return jsonify({"error": "El correo no es válido o ya está en uso."}), 409
+        user.email = email
+    if "fullName" in data:
+        user.full_name = (data["fullName"] or "").strip()
+    if "role" in data:
+        if data["role"] not in ("student", "tutor", "admin"):
+            return jsonify({"error": "Rol no válido."}), 400
+        user.role = data["role"]
+    if "emailVerified" in data:
+        user.email_verified = bool(data["emailVerified"])
+    if data.get("password"):
+        if len(data["password"]) < 8:
+            return jsonify({"error": "La contraseña debe tener al menos 8 caracteres."}), 400
+        user.set_password(data["password"])
+    if not user.full_name:
+        return jsonify({"error": "El nombre es obligatorio."}), 400
+    db.session.commit()
+    return jsonify({"user": user.as_dict()})
+
+
+@admin_bp.delete("/users/<int:user_id>")
+@roles_required("admin")
+def delete_user(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.id == current_user().id:
+        return jsonify({"error": "No puedes eliminar tu propia cuenta mientras la utilizas."}), 400
+    for course in list(Course.query.all()):
+        if user in course.tutors:
+            course.tutors.remove(user)
+    db.session.delete(user)
+    db.session.commit()
+    return "", 204
 
 
 @admin_bp.get("/competencies")

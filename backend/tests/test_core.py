@@ -65,7 +65,39 @@ class QuestionnaireFlowTest(unittest.TestCase):
         response = self.client.get("/api/admin/courses", headers=self.login(admin.email, "secret123"))
         self.assertEqual(response.status_code, 200)
 
+    def test_admin_can_manage_users_and_assign_tutor(self):
+        admin = User(email="admin@cuatrovientos.org", full_name="Administración", email_verified=True)
+        admin.set_password("secret123")
+        db.session.add(admin)
+        db.session.commit()
+        headers = self.login(admin.email, "secret123")
+        created = self.client.post("/api/admin/users", headers=headers, json={
+            "email": "tutor@example.org", "fullName": "Tutor de prueba", "role": "tutor",
+            "password": "secret123", "emailVerified": True,
+        })
+        self.assertEqual(created.status_code, 201)
+        tutor_id = created.json["user"]["id"]
+        assigned = self.client.post(f"/api/admin/courses/{self.course.id}/tutors", headers=headers,
+                                    json={"userId": tutor_id})
+        self.assertEqual(assigned.status_code, 200)
+        self.assertEqual(assigned.json["course"]["tutors"][0]["id"], tutor_id)
+
+    def test_tutor_exports_are_scoped_to_assigned_courses(self):
+        tutor = User(email="tutor@example.org", full_name="Tutor", role="tutor", email_verified=True)
+        tutor.set_password("secret123")
+        outsider = User(email="otro@example.org", full_name="Otro tutor", role="tutor", email_verified=True)
+        outsider.set_password("secret123")
+        self.course.tutors.append(tutor)
+        db.session.add_all([tutor, outsider])
+        db.session.commit()
+        allowed = self.client.get(f"/api/tutor/courses/{self.course.id}/export.xlsx",
+                                  headers=self.login(tutor.email, "secret123"))
+        self.assertEqual(allowed.status_code, 200)
+        self.assertIn("spreadsheetml", allowed.content_type)
+        forbidden = self.client.get(f"/api/tutor/courses/{self.course.id}/export.pdf",
+                                    headers=self.login(outsider.email, "secret123"))
+        self.assertEqual(forbidden.status_code, 403)
+
 
 if __name__ == "__main__":
     unittest.main()
-
