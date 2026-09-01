@@ -29,4 +29,13 @@ export class TutorComponent implements OnInit {
       next: value => this.dashboard.set(value)
     });
   }
+  export(format: 'xlsx' | 'pdf') {
+    if (!this.selectedCourseId) return;
+    this.api.exportCourse(this.selectedCourseId, format).subscribe(blob => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url; link.download = `resultados-${this.selectedCourseId}.${format}`; link.click();
+      URL.revokeObjectURL(url);
+    });
+  }
 }

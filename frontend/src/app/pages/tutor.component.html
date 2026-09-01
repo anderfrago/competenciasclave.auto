@@ -2,10 +2,10 @@
     <div>
         <h1 class="h2 mb-1">Panel de tutoría</h1>
         <p class="text-secondary mb-0">Consulta la visión grupal e individual de tus cursos.</p>
-    </div><select class="form-select w-auto" [(ngModel)]="selectedCourseId" (change)="loadDashboard()">
+    </div><div class="d-flex flex-wrap gap-2"><select class="form-select w-auto" [(ngModel)]="selectedCourseId" (change)="loadDashboard()">
         <option [ngValue]="0">Selecciona un curso</option>@for (course of courses(); track course.id) {<option
             [ngValue]="course.id">{{ course.name }} · {{ course.academicYear }}</option>}
-    </select>
+    </select><button class="btn btn-outline-success" [disabled]="!selectedCourseId" (click)="export('xlsx')">Exportar Excel</button><button class="btn btn-outline-danger" [disabled]="!selectedCourseId" (click)="export('pdf')">Exportar PDF</button></div>
 </section>
 @if (dashboard(); as data) {<div class="row g-3 mb-4">
     <div class="col-md-4">

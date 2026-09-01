@@ -45,6 +45,9 @@ export class ApiService {
   tutorSubmission(id: number) {
     return this.http.get<{ submission: Submission }>(`/api/tutor/submissions/${id}`);
   }
+  exportCourse(courseId: number, format: 'xlsx' | 'pdf') {
+    return this.http.get(`/api/tutor/courses/${courseId}/export.${format}`, { responseType: 'blob' });
+  }
   adminCourses() {
     return this.http.get<{ courses: Course[] }>('/api/admin/courses');
   }
@@ -59,6 +62,16 @@ export class ApiService {
   }
   users(query = '') {
     return this.http.get<{ users: User[] }>(`/api/admin/users?query=${encodeURIComponent(query)}`);
+  }
+  createUser(payload: Partial<User> & { password?: string }) {
+    return this.http.post<{ user: User }>('/api/admin/users', payload);
+  }
+  updateUser(id: number, payload: Partial<User> & { password?: string }) {
+    return this.http.patch<{ user: User }>(`/api/admin/users/${id}`, payload);
+  }
+  deleteUser(id: number) { return this.http.delete(`/api/admin/users/${id}`); }
+  removeTutor(courseId: number, userId: number) {
+    return this.http.delete(`/api/admin/courses/${courseId}/tutors/${userId}`);
   }
   assignTutor(courseId: number, userId: number) {
     return this.http.post<{ course: Course }>(`/api/admin/courses/${courseId}/tutors`, { userId });

@@ -16,6 +16,7 @@ export class AdminComponent implements OnInit {
   readonly isError = signal(false);
 
   newCourse = { name: '', academicYear: '' };
+  newUser = { fullName: '', email: '', role: 'student' as User['role'], password: '', emailVerified: false };
   userQuery = '';
   encouragement = '';
   newCompetencyName = '';
@@ -24,7 +25,7 @@ export class AdminComponent implements OnInit {
   constructor(private readonly api: ApiService) { }
 
   ngOnInit() {
-    this.reload(); this.api.settings().subscribe({ next: value => this.encouragement = value.encouragementMessage });
+    this.reload(); this.loadUsers(); this.api.settings().subscribe({ next: value => this.encouragement = value.encouragementMessage });
     this.api.adminCompetencies().subscribe({ next: value => this.competencies.set(value.competencies) });
   }
   reload() {
@@ -63,6 +64,23 @@ export class AdminComponent implements OnInit {
     this.api.users(this.userQuery).subscribe({
       next: value => this.users.set(value.users)
     });
+  }
+  loadUsers() { this.api.users().subscribe({ next: value => this.users.set(value.users) }); }
+  createUser() {
+    this.api.createUser(this.newUser).subscribe({
+      next: () => { this.newUser = { fullName: '', email: '', role: 'student', password: '', emailVerified: false }; this.loadUsers(); this.notice('Usuario creado.'); },
+      error: response => this.notice(response.error?.error || 'No se ha podido crear el usuario.', true)
+    });
+  }
+  saveUser(user: User) {
+    this.api.updateUser(user.id, user).subscribe({ next: () => this.notice('Usuario actualizado.'), error: response => this.notice(response.error?.error || 'No se ha podido actualizar.', true) });
+  }
+  removeUser(user: User) {
+    if (!confirm(`¿Eliminar la cuenta de ${user.fullName}?`)) return;
+    this.api.deleteUser(user.id).subscribe({ next: () => { this.loadUsers(); this.notice('Usuario eliminado.'); }, error: response => this.notice(response.error?.error || 'No se ha podido eliminar.', true) });
+  }
+  unassignTutor(course: Course, user: User) {
+    this.api.removeTutor(course.id, user.id).subscribe({ next: () => { this.reload(); this.notice('Tutor desasignado.'); } });
   }
 
   assignTutor(user: User) {

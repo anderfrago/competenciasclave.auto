@@ -15,7 +15,7 @@ DARK_BLUE = RGBColor(31, 77, 120)
 MUTED = RGBColor(91, 101, 114)
 
 
-def font(run, size=11, color=None, bold=False):
+def font(run, size=10.5, color=None, bold=False):
     run.font.name = "Calibri"
     run._element.rPr.rFonts.set(qn("w:ascii"), "Calibri")
     run._element.rPr.rFonts.set(qn("w:hAnsi"), "Calibri")
@@ -86,7 +86,7 @@ def add_heading(doc, text, level=1):
 def paragraph(doc, text, bold_start=None):
     p = doc.add_paragraph()
     p.paragraph_format.space_after = Pt(6)
-    p.paragraph_format.line_spacing = 1.25
+    p.paragraph_format.line_spacing = 1.18
     if bold_start and text.startswith(bold_start):
         r = p.add_run(bold_start)
         font(r, bold=True)
@@ -101,7 +101,7 @@ def paragraph(doc, text, bold_start=None):
 def bullet(doc, text):
     p = doc.add_paragraph(style="List Bullet")
     p.paragraph_format.space_after = Pt(4)
-    p.paragraph_format.line_spacing = 1.25
+    p.paragraph_format.line_spacing = 1.18
     r = p.add_run(text)
     font(r)
 
@@ -109,7 +109,7 @@ def bullet(doc, text):
 def numbered(doc, text):
     p = doc.add_paragraph(style="List Number")
     p.paragraph_format.space_after = Pt(4)
-    p.paragraph_format.line_spacing = 1.25
+    p.paragraph_format.line_spacing = 1.18
     r = p.add_run(text)
     font(r)
 
@@ -166,9 +166,9 @@ def setup(doc):
     normal = styles["Normal"]
     normal.font.name = "Calibri"
     normal._element.rPr.rFonts.set(qn("w:ascii"), "Calibri")
-    normal.font.size = Pt(11)
+    normal.font.size = Pt(10.5)
     normal.paragraph_format.space_after = Pt(6)
-    normal.paragraph_format.line_spacing = 1.25
+    normal.paragraph_format.line_spacing = 1.18
     header = section.header.paragraphs[0]
     header.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     r = header.add_run("Autopercepción de Competencias Clave · Guía de despliegue")
@@ -200,7 +200,6 @@ def build():
         "Panel de tutoría y administración de cursos, tutores, competencias e ítems.",
     ]:
         bullet(doc, item)
-    doc.add_page_break()
 
     add_heading(doc, "1. Requisitos previos")
     paragraph(doc, "Antes de empezar, prepara una cuenta de GitHub, una cuenta de PythonAnywhere y un proyecto de Google Cloud. La dirección cc_autopercepción@gmail.com puede usarse para administrarlos, pero el nombre de usuario de PythonAnywhere lo eliges al crear la cuenta y determina la URL pública.")
@@ -230,7 +229,6 @@ def build():
     code(doc, "pnpm install")
     code(doc, "pnpm start")
     paragraph(doc, "Abre http://localhost:4200. El proxy de desarrollo deriva las llamadas /api al backend local en el puerto 5000.")
-    doc.add_page_break()
 
     add_heading(doc, "4. Configurar variables de entorno")
     paragraph(doc, "Copia .env.example a .env y completa las claves. Genera SECRET_KEY y JWT_SECRET_KEY con valores aleatorios largos y diferentes. Las cuentas administradoras se separan por comas en ADMIN_EMAILS.")
@@ -248,11 +246,10 @@ def build():
     numbered(doc, "Añade como origen autorizado la URL de PythonAnywhere: https://TU_USUARIO.pythonanywhere.com.")
     numbered(doc, "Añade como URI de redirección autorizado: https://TU_USUARIO.pythonanywhere.com/api/auth/google/callback.")
     numbered(doc, "Copia el identificador y el secreto en GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET del archivo .env.")
-    paragraph(doc, "Las cuentas de Google, incluidas educación.navarra.es, se validan mediante Google. La aplicación solo permite asignar como tutor a una cuenta que haya accedido con Google y termine en @cuatrovientos.org.")
+    paragraph(doc, "Las cuentas de Google, incluidas educación.navarra.es, se validan mediante Google. La administración puede asignar como tutor a cualquier cuenta registrada y gestionar su rol desde el panel de usuarios.")
 
     add_heading(doc, "6. Verificación por correo", 1)
     paragraph(doc, "Para el registro con contraseña es necesario un SMTP funcional. Con Gmail se recomienda crear una contraseña de aplicación con la verificación en dos pasos activada; no uses la contraseña habitual. Indica el remitente en SMTP_FROM y guarda la contraseña únicamente en .env.")
-    doc.add_page_break()
 
     add_heading(doc, "7. Desplegar en PythonAnywhere")
     paragraph(doc, "La configuración siguiente sirve para una aplicación Flask manual. Sustituye TU_USUARIO por el nombre de usuario real de PythonAnywhere y RUTA_PROYECTO por la carpeta donde hayas clonado el repositorio.")
@@ -276,7 +273,6 @@ def build():
     code(doc, "flask --app run.py db upgrade")
     code(doc, "flask --app run.py init-db")
     paragraph(doc, "init-db puede ejecutarse de nuevo sin duplicar las competencias. Antes de actualizar el código en producción, descarga una copia del archivo SQLite como medida de seguridad.")
-    doc.add_page_break()
 
     add_heading(doc, "8. Puesta en marcha y comprobación")
     add_table(doc, ["Comprobación", "Resultado esperado"], [
@@ -302,8 +298,7 @@ def build():
     add_heading(doc, "Actualizar la aplicación", 1)
     numbered(doc, "Realiza los cambios y pruebas en local.")
     numbered(doc, "Sube los cambios a GitHub.")
-    numbered(doc, "En PythonAnywhere ejecuta git pull, instala nuevas dependencias si las hubiera, ejecuta flask --app run.py db upgrade y vuelve a construir Angular si cambió el frontend.")
-    numbered(doc, "Pulsa Reload en la pestaña Web y repite las comprobaciones esenciales.")
+    numbered(doc, "En PythonAnywhere ejecuta git pull, instala nuevas dependencias si las hubiera, ejecuta flask --app run.py db upgrade, vuelve a construir Angular si cambió el frontend y pulsa Reload en la pestaña Web. Después repite las comprobaciones esenciales.")
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     doc.save(OUTPUT)

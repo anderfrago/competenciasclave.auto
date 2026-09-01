@@ -24,9 +24,9 @@
                         <div class="d-flex justify-content-between gap-3">
                             <div><strong>{{ course.name }}</strong><span class="ms-2 small-muted">{{ course.academicYear
                                     }}</span>
-                                <div class="small-muted">{{ course.tutors.map(t => t.fullName).join(', ') || 'Sin tutor
-                                    asignado' }}
-                                </div><code class="small">/invitacion/{{ course.inviteCode }}</code>
+                                <div class="small-muted">{{ course.tutors.map(t => t.fullName).join(', ') || 'Sin tutor asignado' }}</div>
+                                @for (tutor of course.tutors; track tutor.id) {<button class="btn btn-link btn-sm text-danger p-0 me-2" (click)="unassignTutor(course, tutor)">Desasignar {{ tutor.fullName }}</button>}
+                                <div><code class="small">/invitacion/{{ course.inviteCode }}</code></div>
                             </div>
                             <div class="btn-group align-self-start"><button class="btn btn-sm btn-outline-secondary"
                                     (click)="selectCourse(course)">Asignar tutor</button><button
@@ -49,9 +49,8 @@
                             user.fullName
                             }}</strong><small class="d-block">{{ user.email }} · {{ user.authProvider
                             }}</small></button>} @empty
-                    {<span class="small-muted">Busca una cuenta que ya haya accedido con Google.</span>}</div>} @else {
-                <p class="text-secondary mb-0">Selecciona un curso para asignar una cuenta tutora de Google
-                    @cuatrovientos.org.
+                    {<span class="small-muted">Busca una cuenta por nombre o correo.</span>}</div>} @else {
+                <p class="text-secondary mb-0">Selecciona un curso para asignar una cuenta tutora.
                 </p>}
             </div>
         </section>
@@ -64,6 +63,21 @@
         </section>
     </div>
 </div>
+<section class="card mt-4">
+    <div class="card-body">
+        <h2 class="h4">Usuarios</h2>
+        <div class="row g-2 mb-3">
+            <div class="col-md"><input class="form-control" [(ngModel)]="newUser.fullName" placeholder="Nombre y apellidos"></div>
+            <div class="col-md"><input class="form-control" type="email" [(ngModel)]="newUser.email" placeholder="Correo"></div>
+            <div class="col-md-2"><select class="form-select" [(ngModel)]="newUser.role"><option value="student">Alumno/a</option><option value="tutor">Tutor/a</option><option value="admin">Admin</option></select></div>
+            <div class="col-md"><input class="form-control" type="password" [(ngModel)]="newUser.password" placeholder="Contraseña opcional"></div>
+            <div class="col-md-auto"><button class="btn btn-primary" (click)="createUser()">Crear usuario</button></div>
+        </div>
+        <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Verificado</th><th></th></tr></thead><tbody>
+            @for (user of users(); track user.id) {<tr><td><input class="form-control" [(ngModel)]="user.fullName"></td><td><input class="form-control" [(ngModel)]="user.email"></td><td><select class="form-select" [(ngModel)]="user.role"><option value="student">Alumno/a</option><option value="tutor">Tutor/a</option><option value="admin">Admin</option></select></td><td><input class="form-check-input" type="checkbox" [(ngModel)]="user.emailVerified"></td><td class="text-nowrap"><button class="btn btn-sm btn-outline-primary me-1" (click)="saveUser(user)">Guardar</button><button class="btn btn-sm btn-outline-danger" (click)="removeUser(user)">Eliminar</button></td></tr>}
+        </tbody></table></div>
+    </div>
+</section>
 <section class="card mt-4">
     <div class="card-body">
         <h2 class="h4">Cuestionario y rúbrica</h2>
@@ -99,4 +113,4 @@
                     (click)="addItem(competency.id)">Añadir ítem</button></div>
         </div>}
     </div>
-</section>`
+</section>
