@@ -13,8 +13,8 @@ export class LoginComponent {
   fullName = ''; email = ''; password = '';
   constructor(readonly auth: AuthService, private readonly router: Router, route: ActivatedRoute) {
     this.verified.set(route.snapshot.queryParamMap.get('verified') === '1');
-    const token = route.snapshot.queryParamMap.get('token');
-    if (token) auth.setGoogleToken(token).subscribe({next: () => router.navigateByUrl('/'), error: () => this.show('No se pudo completar el acceso con Google.', true)});
+    const google = route.snapshot.queryParamMap.get('google');
+    if (google) auth.refresh().subscribe({next: () => router.navigateByUrl('/'), error: () => this.show('No se pudo completar el acceso con Google.', true)});
   }
   submit() {
     this.busy.set(true); this.message.set('');

@@ -6,6 +6,7 @@ export interface User {
     role: Role;
     emailVerified: boolean;
     authProvider: string;
+    active: boolean;
 }
 export interface RubricLevel {
     id: number;

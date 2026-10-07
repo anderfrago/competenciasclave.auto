@@ -15,7 +15,6 @@ const roleGuard = (...roles: string[]) => () => {
   const auth = inject(AuthService);
   const router = inject(Router);
   if (auth.user()) return roles.includes(auth.user()!.role) || router.createUrlTree(['/acceso']);
-  if (!localStorage.getItem('cc_access_token')) return router.createUrlTree(['/acceso']);
   return auth.refresh().pipe(map(value => roles.includes(value.user.role) || router.createUrlTree(['/acceso'])), catchError(() => of(router.createUrlTree(['/acceso']))));
 };
 

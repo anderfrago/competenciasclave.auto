@@ -14,5 +14,5 @@ def questionnaire():
 @public_bp.get("/invitations/<invite_code>")
 def invitation(invite_code):
     course = Course.query.filter_by(invite_code=invite_code, active=True).first_or_404()
-    return jsonify({"course": course.as_dict(include_code=False)})
+    return jsonify({"course": {"name": course.name, "academicYear": course.academic_year, "id": course.id}})
 

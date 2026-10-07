@@ -19,4 +19,6 @@
         </div>
     </div>
 </nav>
+@if (auth.sessionError()) { <p class="container alert alert-warning" role="alert">{{ auth.sessionError() }}</p> }
 <main class="container py-4 py-md-5"><router-outlet /></main>
+<footer class="container pb-4"><a href="/privacidad">Privacidad y derechos</a></footer>

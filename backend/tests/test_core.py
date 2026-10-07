@@ -6,21 +6,27 @@ os.environ["ADMIN_EMAILS"] = "admin@cuatrovientos.org"
 
 from app import create_app
 from app.extensions import db
-from app.models import Competency, Course, Enrollment, User
-from app.seed_data import seed_database
+from app.models import Competency, CompetencyItem, Course, Enrollment, RubricLevel, User
 
 
-class QuestionnaireFlowTest(unittest.TestCase):
+class BaseTest(unittest.TestCase):
     def setUp(self):
-        self.app = create_app()
+        self.app = create_app({"TESTING": True, "SECRET_KEY": "a" * 48, "JWT_SECRET_KEY": "b" * 48, "JWT_COOKIE_SECURE": False, "SESSION_COOKIE_SECURE": False})
         self.app.config.update(TESTING=True)
         self.context = self.app.app_context()
         self.context.push()
         db.create_all()
-        seed_database()
+        # Synthetic fixtures: tests never require a workbook with student responses.
+        for number in range(7):
+            competency = Competency(name=f"Competencia {number}", sort_order=number)
+            competency.items = [CompetencyItem(statement="Prueba directa", sort_order=0),
+                                CompetencyItem(statement="Prueba inversa", reverse_score=True, sort_order=1)]
+            competency.rubric_levels = [RubricLevel(label=label, max_score=maximum, feedback="Orientación de prueba")
+                                       for label, maximum in (("Incipiente", 2), ("En desarrollo", 3), ("Generado", 4))]
+            db.session.add(competency)
         self.student = User(email="alumna@example.org", full_name="Alumna de prueba", email_verified=True)
         self.student.set_password("secret123")
-        self.course = Course(name="1º Desarrollo", academic_year="2026/2027")
+        self.course = Course(name="Curso de prueba", academic_year="2026/2027")
         db.session.add_all([self.student, self.course])
         db.session.flush()
         db.session.add(Enrollment(student_id=self.student.id, course_id=self.course.id))
@@ -33,10 +39,12 @@ class QuestionnaireFlowTest(unittest.TestCase):
         self.context.pop()
 
     def login(self, email, password):
-        response = self.client.post("/api/auth/login", json={"email": email, "password": password})
+        response = self.client.post("/api/auth/login", json={"email": email, "password": password}, headers={"X-Requested-With": "XMLHttpRequest"})
         self.assertEqual(response.status_code, 200)
-        return {"Authorization": f"Bearer {response.json['accessToken']}"}
+        return {"X-Requested-With": "XMLHttpRequest", "X-CSRF-TOKEN": self.client.get_cookie("csrf_access_token").value}
 
+
+class QuestionnaireFlowTest(BaseTest):
     def test_questionnaire_submission_calculates_results(self):
         questionnaire = self.client.get("/api/questionnaire")
         self.assertEqual(questionnaire.status_code, 200)

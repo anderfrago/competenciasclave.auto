@@ -8,3 +8,5 @@ python-dotenv==1.0.1
 openpyxl==3.1.5
 requests==2.32.3
 reportlab==4.2.5
+# reportlab also installs chardet; keep it within requests 2.32's supported range.
+chardet==5.2.0

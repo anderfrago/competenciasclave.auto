@@ -36,7 +36,7 @@ def create_submission():
     data = request.get_json() or {}
     course_id = data.get("courseId")
     course = db.session.get(Course, course_id)
-    if not course or not Enrollment.query.filter_by(student_id=user.id, course_id=course.id).first():
+    if not course or not course.active or not Enrollment.query.filter_by(student_id=user.id, course_id=course.id).first():
         return jsonify({"error": "No perteneces a este curso."}), 403
     try:
         answers = {int(answer["itemId"]): int(answer["value"]) for answer in data.get("answers", [])}

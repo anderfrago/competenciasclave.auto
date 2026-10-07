@@ -9,3 +9,6 @@ frontend/dist/
 frontend/.angular/
 *.log
 
+
+.tmp/
+dist/

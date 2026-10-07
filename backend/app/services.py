@@ -11,7 +11,7 @@ from .models import AppSetting, Competency, CompetencyResult, Submission
 
 
 def sync_role(user) -> None:
-    if user.email.lower() in current_app.config["ADMIN_EMAILS"]:
+    if user.email_verified and user.email.lower() in current_app.config["ADMIN_EMAILS"]:
         user.role = "admin"
 
 
@@ -19,14 +19,14 @@ def send_email(recipient: str, subject: str, body: str) -> bool:
     """Envía correo SMTP; en local sin SMTP deja el enlace visible en el registro."""
     config = current_app.config
     if not config["SMTP_HOST"] or not config["SMTP_USERNAME"] or not config["SMTP_PASSWORD"]:
-        current_app.logger.warning("SMTP sin configurar. Correo para %s: %s", recipient, body)
+        current_app.logger.warning("SMTP sin configurar; no se ha enviado la verificación.")
         return False
     message = EmailMessage()
     message["Subject"] = subject
     message["From"] = config["SMTP_FROM"]
     message["To"] = recipient
     message.set_content(body)
-    with smtplib.SMTP(config["SMTP_HOST"], config["SMTP_PORT"]) as server:
+    with smtplib.SMTP(config["SMTP_HOST"], config["SMTP_PORT"], timeout=15) as server:
         server.starttls()
         server.login(config["SMTP_USERNAME"], config["SMTP_PASSWORD"])
         server.send_message(message)

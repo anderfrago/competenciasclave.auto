@@ -22,6 +22,13 @@ class TimestampMixin:
     )
 
 
+class AuthAttempt(db.Model):
+    __tablename__ = "auth_attempts"
+    key = db.Column(db.String(64), primary_key=True)
+    hits = db.Column(db.Integer, nullable=False)
+    expires_at = db.Column(db.Integer, nullable=False, index=True)
+
+
 class User(TimestampMixin, db.Model):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
@@ -31,6 +38,8 @@ class User(TimestampMixin, db.Model):
     role = db.Column(db.String(20), nullable=False, default="student")
     email_verified = db.Column(db.Boolean, nullable=False, default=False)
     auth_provider = db.Column(db.String(20), nullable=False, default="local")
+    active = db.Column(db.Boolean, nullable=False, default=True)
+    auth_version = db.Column(db.Integer, nullable=False, default=1)
     google_subject = db.Column(db.String(255), unique=True)
     enrollments = db.relationship("Enrollment", back_populates="student", cascade="all, delete-orphan")
     submissions = db.relationship("Submission", back_populates="student", cascade="all, delete-orphan")
@@ -47,6 +56,7 @@ class User(TimestampMixin, db.Model):
             "email": self.email,
             "fullName": self.full_name,
             "role": self.role,
+            "active": self.active,
             "emailVerified": self.email_verified,
             "authProvider": self.auth_provider,
         }

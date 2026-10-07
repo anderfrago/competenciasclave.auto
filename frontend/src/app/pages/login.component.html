@@ -15,6 +15,7 @@
                         sesión</button><button class="btn" [class.btn-primary]="mode() === 'register'"
                         [class.btn-outline-primary]="mode() !== 'register'" (click)="mode.set('register')">Crear
                         cuenta</button></div>
+                <p class="small text-muted">El centro debe autorizar tu correo antes de crear una cuenta.</p>
                 <form (ngSubmit)="submit()">
                     @if (mode() === 'register') { <div class="mb-3"><label class="form-label">Nombre y
                             apellidos</label><input class="form-control" name="name" [(ngModel)]="fullName" required>
@@ -35,7 +36,7 @@
                 </div>
                 <button class="btn btn-outline-dark w-100" (click)="auth.googleLogin()">Continuar con Google</button>
                 <p class="small-muted mt-4 mb-0">Al crear una cuenta aceptas el tratamiento de datos descrito en <a
-                        href="https://cuatrovientos.org/rgpd/" target="_blank" rel="noopener">la política de
+                        href="/privacidad" target="_blank" rel="noopener">la política de
                         privacidad</a>.</p>
             </div>
         </div>

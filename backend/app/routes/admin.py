@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from flask import Blueprint, jsonify, request
 from ..auth import current_user, roles_required
 from ..extensions import db
@@ -61,6 +63,7 @@ def add_tutor(course_id):
     user.role = "tutor" if user.role != "admin" else "admin"
     if user not in course.tutors:
         course.tutors.append(user)
+        course.updated_at = datetime.utcnow()
     db.session.commit()
     return jsonify({"course": course.as_dict()})
 
@@ -72,6 +75,7 @@ def remove_tutor(course_id, user_id):
     tutor = db.session.get(User, user_id)
     if tutor and tutor in course.tutors:
         course.tutors.remove(tutor)
+        course.updated_at = datetime.utcnow()
         db.session.commit()
     return "", 204
 
@@ -114,24 +118,32 @@ def create_user():
 def update_user(user_id):
     user = User.query.get_or_404(user_id)
     data = body()
+    email_changed = False
     if "email" in data:
         email = (data["email"] or "").strip().lower()
         duplicate = User.query.filter(User.email == email, User.id != user.id).first()
         if not email or duplicate:
             return jsonify({"error": "El correo no es válido o ya está en uso."}), 409
+        if email != user.email:
+            email_changed = True
+            user.email_verified = False
+            user.google_subject = None
         user.email = email
+    if "active" in data:
+        user.active = bool(data["active"])
     if "fullName" in data:
         user.full_name = (data["fullName"] or "").strip()
     if "role" in data:
         if data["role"] not in ("student", "tutor", "admin"):
             return jsonify({"error": "Rol no válido."}), 400
         user.role = data["role"]
-    if "emailVerified" in data:
+    if "emailVerified" in data and not email_changed:
         user.email_verified = bool(data["emailVerified"])
     if data.get("password"):
         if len(data["password"]) < 8:
             return jsonify({"error": "La contraseña debe tener al menos 8 caracteres."}), 400
         user.set_password(data["password"])
+    user.auth_version += 1
     if not user.full_name:
         return jsonify({"error": "El nombre es obligatorio."}), 400
     db.session.commit()
